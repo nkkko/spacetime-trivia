@@ -1,0 +1,62 @@
+---
+description: When needing more context like docs for specific technology
+globs:
+alwaysApply: false
+---
+# Check LLMs Context
+
+Rule for checking the llms folder for additional context when working on solutions or debugging issues.
+
+<rule>
+name: check_llms_context
+description: Standards for checking LLMs documentation and context when implementing solutions or debugging
+filters:
+  # Match any code changes or error messages
+  - type: event
+    pattern: "(code_change|error_message)"
+
+  # Match debugging or implementation discussions
+  - type: content
+    pattern: "(?i)(bug|error|implement|solution|feature)"
+
+actions:
+  - type: suggest
+    message: |
+      When implementing solutions or debugging issues:
+
+      1. Check the llms/spacetime-docs.txt file for relevant context:
+         ```
+         llms/
+         └── spacetime-docs.txt  # Contains important documentation and context
+         ```
+
+      2. Key areas to review:
+         - Implementation guidelines
+         - Known issues and solutions
+         - Best practices
+         - Common pitfalls
+         - Architecture decisions
+
+      3. Use this documentation to:
+         - Understand existing patterns
+         - Follow established conventions
+         - Learn from previous solutions
+         - Avoid repeating known issues
+
+      4. Consider updating the documentation if:
+         - You discover new solutions
+         - You encounter undocumented issues
+         - You implement new patterns
+         - You make architectural decisions
+
+examples:
+  - input: |
+      # When encountering errors or implementing features
+      Error: Failed to process request
+      TODO: Implement new feature
+    output: "Check llms/spacetime-docs.txt for relevant context and solutions"
+
+metadata:
+  priority: medium
+  version: 1.0
+</rule>

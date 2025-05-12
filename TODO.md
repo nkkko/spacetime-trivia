@@ -27,11 +27,11 @@
 ## Sprint S1 – MVP loop *(JTBD J-1 → J-4 focus)*
 
 ### Backend / Game Logic
-- [ ] [P1] Implement `player`, `lobby`, `active_round`, `answer` tables in STDB (@alice) #backend
-- [ ] [P1] Code reducers `join_lobby`, `start_game`, `submit_answer`, `score_round` (@alice) #backend
-- [ ] [P1] Bootstrap 10 canned questions into `question_bank` (@bob) #backend
-- [ ] [P1] Write unit tests for reducers with 3 bot clients (@alice) #backend #tests
-- [ ] [P2] Elo rating calculation helper in Rust util crate (@carol) #backend
+- [x] [P1] Implement `player`, `lobby`, `active_round`, `answer` tables in STDB (@alice) #backend
+- [x] [P1] Code reducers `join_lobby`, `start_game`, `submit_answer`, `score_round` (@alice) #backend
+- [x] [P1] Bootstrap 10 canned questions into `question_bank` (@bob) #backend
+- [x] [P1] Write unit tests for reducers with 3 bot clients (@alice) #backend #tests
+- [x] [P2] Elo rating calculation helper in Rust util crate (@carol) #backend
 
 ### Frontend
 - [x] [P1] Quick-Play landing page → lobby match-making flow (@dave) #frontend – UI screens merged
@@ -41,7 +41,6 @@
 - [ ] [P2] Basic avatar selector for guest players (@erin) #frontend
 
 ### Infra & DevOps
-- [ ] [P1] GitHub Action to run `cargo test` + eslint on PR (@frank) #infra
 - [ ] [P1] Docker compose for local STDB instance + Next.js (@frank) #infra
 - [ ] [P2] Vercel preview deployment hook with staging STDB URL (@frank) #infra
 
@@ -53,9 +52,9 @@
 
 ## Sprint S2 – Crowd Meter & Lightning Round *(JTBD J-3 & J-4)*
 
-- [ ] [P1] Wire `CrowdMeter` component to live STDB subscription (#frontend #backend)
+- [x] [P1] Wire `CrowdMeter` component to live STDB subscription (#frontend #backend)
       _bar-chart UI done; needs data hook_ (@dave)
-- [ ] [P1] Implement `lightning_tick` scheduled reducer + double-points logic (@alice) #backend
+- [x] [P1] Implement `lightning_tick` scheduled reducer + double-points logic (@alice) #backend
 - [x] [P1] Neon banner CSS animation for Lightning Round (@grace) #design – LightningBanner merged
 - [ ] [P2] Server-side metrics for CrowdMeter latency p95 in Prometheus (@frank) #infra
 
@@ -64,7 +63,7 @@
 ## Sprint S3 – LLM-generated Question Sets *(JTBD J-6)*
 
 - [ ] [P1] Cloudflare Workflow script `LLMWorker` calling Workers AI (@bob) #backend #ai
-- [ ] [P1] Reducer `request_agent_work` + job queue tables (@alice) #backend
+- [x] [P1] Reducer `request_agent_work` + job queue tables (@alice) #backend
 - [ ] [P2] Agent Studio chat UI for creators (@erin) #frontend
 
 ---
@@ -79,7 +78,7 @@
 
 ## Sprint S5 – Agent Marketplace *(JTBD J-10)*
 
-- [ ] [P1] `agent_registry` table + upload flow (WASM hash, quota) (@alice) #backend
+- [x] [P1] `agent_registry` table + upload flow (WASM hash, quota) (@alice) #backend
 - [ ] [P1] AgentRunner service (could be Worker) sandboxing & metering (@bob) #backend #infra
 - [ ] [P2] Marketplace web page listing rated agents (@erin) #frontend
 
@@ -95,3 +94,4 @@
 ## Icebox
 - [ ] [P3] Replay highlight GIF generator *(JTBD J-8)* (@heidi) #backend #frontend
 - [ ] [P3] Credibility score badge calculation algo *(JTBD J-9)* (@alice) #backend
+- [ ] [P3] Refactor initial question bootstrapping to rely on agent population; minimize/remove hardcoded questions in lib.rs init function (@developer) #backend #architecture

@@ -1,0 +1,89 @@
+---
+description: When creating new Cursor rules
+globs:
+alwaysApply: false
+---
+# MDC Rule Creation Guidelines
+
+Rule for ensuring proper creation and organization of MDC rule files.
+
+<rule>
+name: mdc_rule_creation
+description: Standards for creating and organizing new MDC rule files
+filters:
+  # Match requests to create new rules
+  - type: content
+    pattern: "(?i)(create|new|add).*rule"
+
+  # Match MDC file operations
+  - type: event
+    pattern: "file_create.*\\.mdc$"
+
+actions:
+  - type: reject
+    conditions:
+      - pattern: "^(?!\\.\\/\\.cursor\\/rules\\/.*\\.mdc$)"
+        message: "New MDC rules must be created in the .cursor/rules directory"
+
+  - type: suggest
+    message: |
+      When creating new MDC rules:
+
+      1. Location Requirements:
+         ```
+         .cursor/rules/            # All rules must be here
+         ├── your-rule-name.mdc    # One rule per file
+         └── another-rule.mdc      # Separate files for each rule
+         ```
+
+      2. File Naming Convention:
+         - Use kebab-case: example-rule-name.mdc
+         - Make names descriptive and specific
+         - Always use .mdc extension
+         - One rule per file
+
+      3. Basic Rule Structure:
+         ```
+         # Rule Title
+
+         Brief description of the rule's purpose
+
+         <rule>
+         name: rule_name
+         description: Detailed description
+         filters:
+           - type: [event|content|file_extension]
+             pattern: "your_pattern"
+         actions:
+           - type: [suggest|reject]
+             message: "Your message"
+         examples:
+           - input: "Example input"
+             output: "Expected output"
+         metadata:
+           priority: [low|medium|high]
+           version: 1.0
+         </rule>
+         ```
+
+      4. Best Practices:
+         - Keep rules focused and single-purpose
+         - Include clear examples
+         - Document the rule's intent
+         - Use clear, specific patterns
+         - Test rules before committing
+
+examples:
+  - input: |
+      # Bad: Creating rule in wrong location
+      /rules/new-rule.mdc
+      new-rule.mdc
+
+      # Good: Creating rule in correct location
+      .cursor/rules/new-rule.mdc
+    output: "Rule file created in correct location with proper structure"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

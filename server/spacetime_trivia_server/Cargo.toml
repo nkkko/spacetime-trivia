@@ -1,0 +1,22 @@
+[package]
+name = "spacetime-module"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spacetimedb = "1.1.1"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+
+[workspace]

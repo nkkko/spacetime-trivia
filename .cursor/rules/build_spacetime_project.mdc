@@ -1,0 +1,106 @@
+---
+description: When you need to build the project
+globs:
+alwaysApply: false
+---
+# Building SpacetimeDB Projects
+
+Rule for building SpacetimeDB Rust modules correctly.
+
+<rule>
+name: build_spacetime_project
+description: Standards and instructions for building SpacetimeDB Rust modules
+filters:
+  - type: file_extension
+    pattern: "\\.rs$"
+  - type: content
+    pattern: "use spacetimedb::"
+  - type: event
+    pattern: "build"
+
+actions:
+  - type: suggest
+    message: |
+      When building SpacetimeDB projects:
+
+      1. Prerequisites:
+         - Ensure the `spacetime` CLI is installed and in your PATH.
+           (See: https://spacetimedb.com/install)
+         - For **Rust** modules (default for `spacetime init --lang rust`):
+           - The `spacetime build` command typically handles Rust toolchain requirements (like nightly and wasm32-wasi target) automatically by using its own bundled Rust distribution if a compatible system one is not found.
+           - If you encounter toolchain issues, ensure you have a working Rust environment. `rustup target add wasm32-wasi` might be needed if using your system's Rust directly.
+         - For **C#** modules (`spacetime init --lang csharp`):
+           - .NET 8 SDK must be installed. (See: https://dotnet.microsoft.com/download)
+
+      2. Building the Server Module:
+         The primary command to compile your server module (e.g., from `lib.rs` or `Lib.cs`) into a WebAssembly (`.wasm`) file is:
+         ```bash
+         # Navigate to the directory *containing* your module folder, or use --project-path
+         RUSTUP_TOOLCHAIN=nightly spacetime build --project-path path/to/your/module_folder
+         ```
+         - This command compiles your code and places the `.wasm` artifact typically in `path/to/your/module_folder/target/wasm32-wasi/debug/your_module_name.wasm` (for Rust debug builds).
+
+      3. Publishing the Module:
+         After a successful build, or if you have a pre-compiled `.wasm` file, publish it to a SpacetimeDB instance:
+         ```bash
+         # Build and publish from source (most common for development):
+         spacetime publish --project-path path/to/your/module_folder my_database_name_or_identity
+
+         # Publish a pre-compiled WASM file:
+         spacetime publish --bin-path path/to/your_module.wasm my_database_name_or_identity
+         ```
+         - `[my_database_name_or_identity]` is optional. If omitted, a nameless database is created.
+         - Use `-s, --server <server_address_or_nickname>` to target a specific server (e.g., `maincloud` or `localhost:3000`).
+         - Use `-c, --delete-data` to clear data in an existing database before publishing an update.
+
+      4. Generating Client Bindings:
+         After your module is built and ideally published (so the schema is accessible), generate type-safe client bindings:
+         ```bash
+         # For Rust clients:
+         spacetime generate --lang rust --out-dir path/to/client/src/bindings --project-path path/to/your/module_folder
+         # For C# clients:
+         spacetime generate --lang csharp --out-dir path/to/client/bindings --project-path path/to/your/module_folder
+         ```
+         - This uses the schema from your compiled module to create code for your client application to interact with tables, reducers, and types.
+
+      5. Project structure requirements for Rust:
+         - Cargo.toml must have:
+           ```toml
+           [lib]
+           crate-type = ["cdylib"]
+           ```
+         - Use compatible SpacetimeDB version in dependencies
+
+      6. Publishing:
+         (Covered in detail in section 3: Publishing the Module)
+
+      7. Debugging:
+         - Use SpacetimeDB's logging macros/functions (e.g., `log::info!` in Rust, `Log.Info()` in C#) within your reducers and module logic.
+         - View logs using the CLI:
+           ```bash
+           spacetime logs <database_name_or_identity>
+           # To follow logs in real-time:
+           spacetime logs -f <database_name_or_identity>
+           ```
+
+examples:
+  - input: |
+      # Bad: Using wrong timestamp method
+      ctx.timestamp.unix_timestamp()
+
+      # Good: Using correct timestamp method
+      ctx.timestamp.to_micros_since_unix_epoch()
+    output: "Correctly using SpacetimeDB timestamp API"
+
+  - input: |
+      # Bad: Using .equals() for Identity comparison
+      if !lobby.host_id.equals(&ctx.sender)
+
+      # Good: Using direct comparison
+      if lobby.host_id != ctx.sender
+    output: "Correctly comparing Identity values"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

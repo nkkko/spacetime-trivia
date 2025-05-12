@@ -1,0 +1,142 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Rust Performance Optimization Guidelines
+
+Best practices for writing high-performance Rust code.
+
+<rule>
+name: rust_performance
+description: Guidelines for optimizing Rust code performance
+filters:
+  - type: file_extension
+    pattern: "\\.rs$"
+  - type: content
+    pattern: "(?i)(vec|string|box|rc|mutex|async|await|thread)"
+
+actions:
+  - type: suggest
+    message: |
+      Performance Optimization Guidelines:
+
+      1. Memory Management:
+         ```rust
+         // ✅ Good: Pre-allocated capacity
+         let mut vec = Vec::with_capacity(1000);
+
+         // ❌ Bad: Frequent reallocations
+         let mut vec = Vec::new();
+         for i in 0..1000 {
+             vec.push(i);
+         }
+         ```
+
+      2. Async/Concurrent Programming:
+         ```rust
+         // ✅ Good: Efficient async
+         use tokio::select;
+
+         async fn process() {
+             select! {
+                 res1 = async_task1() => handle_result(res1),
+                 res2 = async_task2() => handle_result(res2),
+             }
+         }
+
+         // ❌ Bad: Blocking in async
+         async fn process() {
+             std::thread::sleep(std::time::Duration::from_secs(1));
+         }
+         ```
+
+      3. Data Structures:
+         - Use appropriate collections for the use case
+         - Consider custom allocators for special needs
+         - Use stack allocation when possible
+         - Minimize cloning and copying
+
+      4. Algorithmic Optimization:
+         ```rust
+         // ✅ Good: Efficient string handling
+         fn process_strings(strings: &[String]) -> String {
+             let total_len: usize = strings.iter().map(String::len).sum();
+             let mut result = String::with_capacity(total_len);
+             for s in strings {
+                 result.push_str(s);
+             }
+             result
+         }
+         ```
+
+      5. Performance Checklist:
+         - Profile before optimizing
+         - Use release builds for benchmarks
+         - Consider SIMD operations
+         - Use iterators efficiently
+         - Minimize allocations
+         - Avoid unnecessary synchronization
+
+      6. Inline Hinting:
+         ```rust
+         // ✅ Good: Selective inlining for small, hot functions
+         #[inline]
+         fn small_utility(x: u32) -> u32 { x + 1 }
+
+         // Use #[inline(always)] with caution, only when profiling shows clear benefit.
+         // Use #[inline(never)] to prevent inlining of large functions or to improve debuggability.
+         ```
+
+      7. Build Profiles for Performance:
+         Optimize release builds by configuring `Cargo.toml`:
+         ```toml
+         [profile.release]
+         opt-level = 3      # Optimization level (0-3, s, z)
+         lto = "fat"        # Link-Time Optimization
+         codegen-units = 1  # Maximize optimizations by using a single codegen unit
+         panic = "abort"    # Optional: abort on panic for smaller binaries/performance
+         strip = true       # Optional: strip debug symbols
+         ```
+         Always profile to find the best settings for your specific application.
+
+      8. Benchmarking (using Criterion):
+         Add `criterion` to your `dev-dependencies` in `Cargo.toml`:
+         ```toml
+         [dev-dependencies]
+         criterion = "0.5" # Check for the latest version
+         ```
+         Then create benchmarks (e.g., in `benches/my_benchmark.rs`):
+         ```rust
+         use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
+         fn fibonacci(n: u64) -> u64 {
+             match n {
+                 0 => 1,
+                 1 => 1,
+                 n => fibonacci(n-1) + fibonacci(n-2),
+             }
+         }
+
+         fn criterion_benchmark(c: &mut Criterion) {
+             c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
+         }
+
+         criterion_group!(benches, criterion_benchmark);
+         criterion_main!(benches);
+         ```
+         Run benchmarks with `cargo bench`.
+
+examples:
+  - input: |
+      fn process_large_data(data: Vec<String>) {
+          for item in data {
+              // Process each item
+          }
+      }
+    output: "Consider taking data as a slice (&[String]) to avoid unnecessary ownership transfer"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

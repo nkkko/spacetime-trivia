@@ -1,0 +1,42 @@
+---
+description: When task is done
+globs:
+alwaysApply: false
+---
+# Rule: Update TODO.md After Task Completion
+
+<rule>
+name: update_todo_md_after_task
+description: Guideline for updating TODO.md after a task is completed.
+filters:
+  - type: file_path
+    pattern: "TODO.md"
+  - type: user_intent
+    # This intent should be triggered when the user indicates a task described in TODO.md is done.
+    # For example, phrases like "this task is complete", "finished the X feature", "mark Y as done in TODO.md"
+    pattern: "(?i)(task is (done|complete|finished)|mark.*as (done|complete|finished)|finish.*task)"
+
+actions:
+  - type: suggest
+    message: |
+      To update TODO.md after a task is completed:
+
+      1. **Identify the Task Line**: Locate the exact line in `TODO.md` that corresponds to the completed task.
+         Example task line:
+         `- [ ] [P1] Implement feature X (@username) #category`
+
+      2. **Mark as Complete**: Change the `[ ]` (incomplete) marker to `[x]` (complete).
+         Updated task line:
+         `- [x] [P1] Implement feature X (@username) #category`
+
+      3. **Verify**: Ensure no other parts of the line (priority, description, owner, tags) are accidentally altered unless intended.
+
+      If you want me to attempt this change, please confirm the exact task description from `TODO.md` that you wish to mark as complete.
+      For example: "Mark '[P1] Implement feature X (@username) #category' as complete in TODO.md"
+</rule>
+
+## Example Usage (Informational)
+
+This rule helps ensure `TODO.md` stays up-to-date. When you tell the AI assistant that a task is done, and you have `TODO.md` in context or mention it, this rule should remind the AI (or you) of the correct procedure to update the file.
+
+If the AI is to make the edit, it will need to be very precise about which line to change.

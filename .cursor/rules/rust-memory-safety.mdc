@@ -1,0 +1,106 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Rust Memory Safety and Ownership Guidelines
+
+Best practices for memory safety, ownership, and borrowing in Rust.
+
+<rule>
+name: rust_memory_safety
+description: Guidelines for proper memory management and ownership patterns in Rust
+filters:
+  - type: file_extension
+    pattern: "\\.rs$"
+  - type: content
+    pattern: "(?i)(mut|ref|&|Box|Rc|Arc|Cell|RefCell|unsafe|'static|Send|Sync)"
+
+actions:
+  - type: suggest
+    message: |
+      Memory Safety and Ownership Guidelines:
+
+      1. Ownership Principles:
+         ```rust
+         // ✅ Good: Clear ownership transfer
+         fn process_data(data: String) { ... }
+
+         // ❌ Bad: Unnecessary cloning
+         fn process_data(data: &String) {
+             let owned = data.clone();
+         }
+         ```
+
+      2. Borrowing Best Practices:
+         - Use `&T` for read-only references
+         - Use `&mut T` only when modification is needed
+         - Avoid self-referential structures unless using `Pin`
+         - Consider lifetime annotations carefully. Rust's lifetime elision rules handle many common cases, but explicit lifetimes are needed for ambiguity or to specify `'static` (lives for the entire program duration) or other specific scopes.
+
+      3. Smart Pointer Usage:
+         - Use `Box<T>` for heap allocation
+         - Use `Rc<T>` for shared ownership
+         - Use `Arc<T>` for thread-safe sharing
+         - Use `Cell`/`RefCell` only when necessary
+
+      4. Common Patterns:
+         ```rust
+         // ✅ Good: Clear mutability intent
+         let mut buffer = Vec::new();
+
+         // ✅ Good: Explicit lifetime annotations
+         fn process<'a>(data: &'a str) -> &'a str { ... }
+
+         // Example of 'static lifetime
+         fn static_string() -> &'static str {
+             "this string is embedded in the binary"
+         }
+
+         // ❌ Bad: Hidden runtime costs
+         let data = RefCell::new(vec![]);
+         ```
+
+      5. Memory Safety Checklist:
+         - Are ownership boundaries clear?
+         - Is mutability minimized?
+         - Are lifetimes properly annotated?
+         - Is interior mutability really needed?
+
+      6. Understanding `unsafe` Rust:
+         `unsafe` allows bypassing some of Rust's compile-time safety checks. Use it sparingly and only when necessary:
+         - Dereferencing raw pointers.
+         - Calling `unsafe` functions (often FFI or hardware interaction).
+         - Implementing `unsafe` traits.
+         - Accessing or mutating `static mut` variables.
+         When writing `unsafe` code, you are responsible for upholding memory safety invariants that the compiler usually guarantees.
+         ```rust
+         // Example: Calling an external C function
+         extern "C" {
+             fn my_c_function(input: *const u8, len: usize);
+         }
+
+         fn call_external(data: &[u8]) {
+             unsafe {
+                 my_c_function(data.as_ptr(), data.len());
+             }
+         }
+         ```
+
+      7. Concurrency Safety: `Send` and `Sync`:
+         - `Send`: A type `T` is `Send` if it is safe to send values of type `T` to another thread.
+         - `Sync`: A type `T` is `Sync` if it is safe to share references (`&T`) of type `T` between threads.
+         Most primitive types are `Send` and `Sync`. These traits are automatically derived if all members of a struct/enum are `Send`/`Sync`.
+         They are fundamental for fearless concurrency in Rust.
+
+examples:
+  - input: |
+      struct Data {
+          value: RefCell<Vec<String>>
+      }
+    output: "Consider if interior mutability is really needed. Could this be a simple Vec<String> with mut methods?"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

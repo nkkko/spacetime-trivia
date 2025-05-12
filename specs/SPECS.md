@@ -84,17 +84,18 @@ flowchart TD
 
 ## 3 · Data Model (STDB, Rust)
 
-| Table                        | Purpose                  | Key columns                                                                                   |
-| ---------------------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
-| **player** (public)          | profile & runtime state  | `id PK(Identity)`, `name`, `elo`, `avatar_url`, `conn_id?`                                    |
-| **lobby** (public)           | game instance            | `id PK(u64 auto_inc)`, `topic`, `host`, `state` *(Waiting/InGame/Finished)*                   |
-| **question\_bank** (public)  | canonical question store | `id PK`, `topic`, `body`, `correct`, `distractors[4]`, `quality_score`, `origin_agent?`       |
-| **active\_round**            | current Q in each lobby  | `lobby_id PK`, `question_id`, `started_at`, `ends_at`                                         |
-| **answer** (scheduled score) | submitted answers        | `id PK(auto_inc)`, `lobby_id`, `player_id`, `question_id`, `answer`, `latency_ms`, `correct?` |
-| **question\_feedback**       | 👍/👎/⚑ votes            | `id PK(auto_inc)`, `player_id`, `question_id`, `is_positive`, `note?`                         |
-| **dataset\_snapshot**        | nightly ETL bookkeeping  | `version PK(u32)`, `export_ts`, `r2_url`                                                      |
-| **agent\_registry**          | uploaded agents          | `id PK`, `owner`, `wasm_hash`, `capabilities[]`, `energy_quota`                               |
-| **agent\_job\_queue**        | agent tasks              | `id PK(auto_inc)`, `agent_id`, `payload_json`, `status`                                       |
+| Table                        | Purpose                  | Key columns                                                                                                      |
+| ---------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **player** (public)          | profile & runtime state  | `player_id PK(Identity)`, `name: String`, `score: u32`, `elo: i32`                                             |
+| **lobby** (public)           | game instance            | `lobby_id PK(u64 auto_inc)`, `name: Option<String>`, `status: String`, `host_id: Identity`, `next_round_is_lightning: bool` |
+| **question_bank** (public)  | canonical question store | `question_id PK(u64 auto_inc)`, `text`, `correct_answer`, `wrong_answers: Vec<String>`, `topic`, `difficulty`, `quality_score: i32`, `origin_agent: Option<String>` |
+| **active_round**            | current Q in each lobby  | `round_id PK(u64 auto_inc)`, `lobby_id: u64`, `question_id: u64`, `start_time: Timestamp`, `status: String`, `is_lightning: bool` |
+| **answer** (scheduled score) | submitted answers        | `answer_id PK(u64 auto_inc)`, `round_id: u64`, `player_id: Identity`, `chosen_answer_index: u32`, `score: Option<u32>` |
+| **question_feedback**       | 👍/👎/⚑ votes            | `id PK(auto_inc)`, `player_id`, `question_id`, `is_positive`, `note?`                         |
+| **dataset_snapshot**        | nightly ETL bookkeeping  | `version PK(u32)`, `export_ts`, `r2_url`                                                      |
+| **agent_registry**          | uploaded agents          | `agent_id PK(u64 auto_inc)`, `owner_id: Identity`, `wasm_hash: String`, `capabilities: Vec<String>`, `energy_quota: u64` |
+| **agent_job_queue**        | agent tasks              | `job_id PK(u64 auto_inc)`, `agent_id: u64`, `payload_json: String`, `status: String`, `error_message: Option<String>` |
+| **crowd_meter_stats** (public) | real-time answer counts | `round_id PK(u64)`, `answer_index PK(u32)`, `count: u32`                                  |
 
 Indexes:
 
@@ -110,12 +111,14 @@ Indexes:
 | ------------------------------ | ---------------------------------- | -------------------------- | ------------------------------------------------------ |
 | `join_lobby`                   | `topic:String`                     | —                          | find/create lobby row; insert into membership table    |
 | `start_game`                   | `lobby_id`                         | `ctx.sender == lobby.host` | seeds first `active_round`, schedules `lightning_tick` |
-| `submit_answer`                | `lobby_id, answer_idx, latency_ms` | one per player per round   | insert `answer` row                                    |
+| `submit_answer`                | `round_id: u64, chosen_answer_index: u32` | one per player per round   | insert `answer` row                                    |
 | `vote_question`                | `question_id, is_positive, note?`  | after answering            | insert `question_feedback`                             |
 | `score_round` *(scheduled)*    | `Answer` row                       | scheduler‑only             | sets `correct`, updates player elo                     |
-| `lightning_tick` *(scheduled)* | `lobby_id`                         | scheduler‑only             | every 120 s sets `is_lightning=true` on next round     |
+| `lightning_tick` *(scheduled)* | `lobby_id`                         | scheduler‑only             | every 120 s sets `is_lightning=true` on next round     |
 | `agent_dispatch`               | `AgentCall`                        | whitelist                  | calls into selected agent capability                   |
 | `request_agent_work`           | `topic_json`                       | —                          | queue job for LLM‑Worker                               |
+| `submit_generated_questions`   | `job_id: u64, agent_id: u64, questions: Vec<NewQuestionData>` | trusted agent/worker       | Inserts questions into `question_bank`                 |
+| `update_agent_job_status`      | `job_id: u64, new_status: String, error: Option<String>` | trusted agent/worker       | Updates status of an `agent_job_queue` entry           |
 
 ---
 

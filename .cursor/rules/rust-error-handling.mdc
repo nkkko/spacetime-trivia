@@ -1,0 +1,145 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Rust Error Handling Guidelines
+
+Best practices for error handling and propagation in Rust.
+
+<rule>
+name: rust_error_handling
+description: Guidelines for robust error handling patterns in Rust
+filters:
+  - type: file_extension
+    pattern: "\\.rs$"
+  - type: content
+    pattern: "(?i)(Result|Error|unwrap|expect|\\?|panic)"
+
+actions:
+  - type: suggest
+    message: |
+      Error Handling Best Practices:
+
+      1. Error Type Design:
+         ```rust
+         // ✅ Good: Custom error type
+         #[derive(Debug, thiserror::Error)]
+         pub enum AppError {
+             #[error("IO error: {0}")]
+             Io(#[from] std::io::Error),
+             #[error("Invalid data: {0}")]
+             ValidationError(String),
+         }
+
+         // ❌ Bad: Using String as error type
+         fn process() -> Result<(), String>
+         ```
+
+      2. Error Propagation:
+         - Use `?` operator for clean error propagation
+         - Avoid `.unwrap()` in production code
+         - Use `.expect()` only for unrecoverable errors
+         - Consider using `anyhow` for application code
+
+      3. Error Context:
+         ```rust
+         // ✅ Good: Adding context to errors
+         use anyhow::{Context, Result};
+
+         fn read_config() -> Result<Config> {
+             std::fs::read_to_string("config.json")
+                 .context("failed to read config file")?
+         }
+         ```
+
+      4. Error Handling Patterns:
+         - Use `Result` for recoverable errors
+         - Use `Option` for missing values
+         - Use `panic!` only for unrecoverable errors
+         - Consider using `try` blocks for complex error handling
+
+      5. Testing Error Cases:
+         ```rust
+         // ✅ Good: Testing error conditions
+         #[test]
+         fn test_error_case() {
+             let result = process_invalid_input();
+             assert!(matches!(result, Err(AppError::ValidationError(_))));
+         }
+         ```
+
+      6. Error Handling in SpacetimeDB Rust Modules:
+         When writing server-side logic (reducers) for SpacetimeDB:
+
+         a. Reducer Error Propagation:
+            - Reducers in SpacetimeDB can return `Result<(), String>` or a custom error type that implements `ToString` (e.g., `Result<(), MyError>`).
+            - If a reducer returns `Err(message)` or `Err(my_error)`, SpacetimeDB will:
+                1. Abort the current transaction (any database changes made by the reducer will be rolled back).
+                2. Log the error message provided.
+            - This is the primary mechanism for signaling failure from a reducer.
+            ```rust
+            use spacetimedb_sdk::spacetimedb;
+
+            #[spacetimedb(reducer)]
+            fn my_critical_operation(ctx: spacetimedb::ReducerContext, arg: String) -> Result<(), String> {
+                if arg.is_empty() {
+                    return Err("Argument cannot be empty".to_string());
+                }
+                // ... perform operations ...
+                // MyTable::insert(MyTableRow { id: 1, data: arg })?;
+                Ok(())
+            }
+            ```
+
+         b. Logging within Reducers:
+            - For debugging and operational insights, use the `log` crate macros (`log::info!`, `log::warn!`, `log::error!`, `log::debug!`, `log::trace!`) within your reducers and other module functions.
+            - SpacetimeDB captures these logs.
+            ```rust
+            use spacetimedb_sdk::spacetimedb;
+            use log::{info, error};
+
+            #[spacetimedb(reducer)]
+            fn process_data_with_logging(ctx: spacetimedb::ReducerContext, data_id: u32) -> Result<(), String> {
+                info!("[{}]: Processing data for ID: {}", ctx.sender, data_id);
+                match find_data(data_id) {
+                    Some(data) => {
+                        // ... process data ...
+                        info!("Successfully processed data for ID: {}", data_id);
+                        Ok(())
+                    }
+                    None => {
+                        error!("Data not found for ID: {}. Transaction will be rolled back.", data_id);
+                        Err(format!("Data not found for ID: {}", data_id))
+                    }
+                }
+            }
+            fn find_data(id: u32) -> Option<String> { /* ... */ Some(String::from("actual_data")) }
+            ```
+
+         c. Viewing Logs:
+            - Use the `spacetime` CLI to view logs from your module running on a SpacetimeDB instance:
+              ```bash
+              # Show all logs for a database
+              spacetime logs my_database_name_or_identity
+
+              # Follow logs in real-time
+              spacetime logs -f my_database_name_or_identity
+
+              # Show the last N log lines
+              spacetime logs -n 50 my_database_name_or_identity
+              ```
+            - These logs include both errors returned by reducers and messages from the `log` crate.
+
+examples:
+  - input: |
+      fn process_data() -> Result<String, Error> {
+          let data = std::fs::read_to_string("data.txt").unwrap();
+          Ok(data)
+      }
+    output: "Avoid using unwrap() in production code. Use the ? operator or proper error handling instead."
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

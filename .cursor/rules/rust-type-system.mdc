@@ -1,0 +1,145 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Rust Type System and Generics Guidelines
+
+Best practices for leveraging Rust's type system and generic programming.
+
+<rule>
+name: rust_type_system
+description: Guidelines for effective use of Rust's type system, traits, and generics
+filters:
+  - type: file_extension
+    pattern: "\\.rs$"
+  - type: content
+    pattern: "(?i)(trait|impl|where|type|struct|enum|generic|<T>)"
+
+actions:
+  - type: suggest
+    message: |
+      Type System and Generics Best Practices:
+
+      1. Trait Design:
+         ```rust
+         // ✅ Good: Well-designed trait
+         pub trait DataProcessor {
+             type Input;
+             type Output;
+
+             fn process(&self, input: Self::Input) -> Result<Self::Output>;
+             fn validate(&self, input: &Self::Input) -> bool;
+         }
+
+         // ❌ Bad: Overly specific trait
+         pub trait StringProcessor {
+             fn process_string(&self, input: String) -> String;
+         }
+         ```
+
+      2. Generic Constraints:
+         - Use meaningful trait bounds
+         - Prefer associated types for single implementations
+         - Use where clauses for complex bounds
+         - Consider default type parameters
+
+      3. Zero-Cost Abstractions:
+         ```rust
+         // ✅ Good: Zero-cost generic code
+         fn process<T: AsRef<str>>(input: T) -> usize {
+             input.as_ref().len()
+         }
+
+         // ❌ Bad: Runtime overhead
+         fn process(input: &dyn AsRef<str>) -> usize {
+             input.as_ref().len()
+         }
+         ```
+
+      4. Type System Features:
+         - Use newtypes for type safety
+         - Leverage phantom data for type-level constraints
+         - Use marker traits for compile-time checks
+         - Consider const generics for array sizes
+
+      5. Common Patterns:
+         ```rust
+         // ✅ Good: Builder pattern with generics
+         pub struct Builder<T> {
+             inner: T,
+             config: BuildConfig,
+         }
+
+         // ✅ Good: Type state pattern
+         pub struct Uninitialized;
+         pub struct Initialized;
+         pub struct Connection<State = Uninitialized> {
+             state: std::marker::PhantomData<State>,
+         }
+         ```
+
+      6. Types in SpacetimeDB Rust Modules:
+         SpacetimeDB has a specific way of defining schema (tables, custom types) which then enables type-safe client generation.
+
+         a. Defining Tables and Custom Types:
+            - Use the `#[spacetimedb::table]` attribute on structs to define database tables.
+            - Use `#[derive(SpacetimeType)]` (or the older `#[spacetimedb(type)]`) on structs and enums to define custom data types that can be used in table columns or reducer arguments/return values.
+            ```rust
+            use spacetimedb_sdk::spacetimedb;
+            use spacetimedb_sdk::types::{Identity, Timestamp, Vec, HashMap, String};
+
+            #[derive(Clone, spacetimedb::SpacetimeType)]
+            pub struct PlayerProfile {
+                pub display_name: String,
+                pub avatar_url: Option<String>,
+            }
+
+            #[spacetimedb::table(pk = "player_id")]
+            pub struct Player {
+                #[primarykey]
+                pub player_id: Identity, // Built-in SpacetimeDB identity type
+                pub profile: PlayerProfile,
+                pub last_seen: Timestamp, // Built-in SpacetimeDB timestamp type
+                pub score: u32,
+                pub inventory: Vec<u32>, // Vector of item IDs
+                pub attributes: HashMap<String, String>, // Key-value attributes
+            }
+            ```
+
+         b. Schema Definition:
+            - These attributed structs and enums collectively define the schema of your SpacetimeDB module.
+            - Supported field types include primitives (u8-u128, i8-i128, f32, f64, bool), `String`, `Vec<T>`, `HashMap<K, V>`, `Option<T>`, `Identity`, `Timestamp`, and other custom types derived with `SpacetimeType`.
+
+         c. Type-Safe Client Generation:
+            - After defining your schema and building your module (`spacetime build`), you can generate client-side bindings.
+            - Command: `spacetime generate --lang <language> --out-dir <output_path> --project-path <module_path>`
+            - This command inspects the compiled module's schema and generates corresponding types and function stubs for the client (e.g., in Rust or C#).
+            - This ensures that client code interacts with the SpacetimeDB module in a type-safe manner, reducing runtime errors and improving developer experience.
+
+         d. Reducers and Types:
+            - Reducer function signatures also use these defined types for arguments and can return `Result<() , String>` or `Result<(), YourCustomErrorTypeImplementingToString>`.
+            ```rust
+            #[spacetimedb(reducer)]
+            pub fn update_player_score(ctx: spacetimedb::ReducerContext, new_score: u32) -> Result<(), String> {
+                if let Some(mut player) = Player::filter_by_player_id(&ctx.sender) {
+                    player.score = new_score;
+                    Player::update_by_player_id(&ctx.sender, player);
+                    Ok(())
+                } else {
+                    Err(format!("Player not found: {}", ctx.sender))
+                }
+            }
+            ```
+
+examples:
+  - input: |
+      struct Container {
+          data: Vec<String>
+      }
+    output: "Consider making Container generic over its data type: Container<T>"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>
